@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+require("dotenv").config();
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 3000;
@@ -21,6 +22,36 @@ const client = new MongoClient(uri, {
 app.get("/", (req, res) => {
   res.send("Artopia server is running");
 });
+
+async function run() {
+  try {
+    await client.connect();
+
+    const db = client.db("artopia_db");
+    const artsCollection = db.collection("artwork");
+
+    //featured arts
+    app.get("/featured", async (req, res) => {
+      const cursor = artsCollection.find().sort({ created_at: -1 }).limit(6);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    //add to db
+    app.post("/arts", async (req, res) => {
+      const newArt = req.body;
+      const result = await artsCollection.insertOne(newArt);
+      res.send(result);
+    });
+
+    await client.db("admin").command({ ping: 1 });
+    console.log(
+      "Pinged your deployment. You successfully connected to MongoDB!"
+    );
+  } finally {
+  }
+}
+run().catch(console.dir);
 
 app.listen(port, () => {
   console.log("Artopia server is running on port", port);

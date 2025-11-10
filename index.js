@@ -31,14 +31,21 @@ async function run() {
     const artsCollection = db.collection("artwork");
 
     //featured arts
-    app.get("/featured", async (req, res) => {
-      const cursor = artsCollection.find().sort({ created_at: -1 }).limit(6);
+    app.get("/artworks/featured", async (req, res) => {
+      const cursor = artsCollection.find().sort({ }).limit(6);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    //get all artworks
+    app.get("/artworks", async (req, res) => {
+      const cursor = artsCollection.find()
       const result = await cursor.toArray();
       res.send(result);
     });
 
     //add to db
-    app.post("/arts", async (req, res) => {
+    app.post("/artworks", async (req, res) => {
       const newArt = req.body;
       const result = await artsCollection.insertOne(newArt);
       res.send(result);

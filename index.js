@@ -3,11 +3,37 @@ const cors = require("cors");
 require("dotenv").config();
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const app = express();
+const admin = require("firebase-admin");
 const port = process.env.PORT || 3000;
+
+const serviceAccount = require("./artopia-firebase-adminsdk.json");
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
 
 //middleware
 app.use(cors());
 app.use(express.json());
+
+const verifyFirebaseToken = async (req, res, next) => {
+  console.log("in the verified middleware ", req.headers.authorization);
+  if (!req.headers.authorization) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+  const token = req.headers.authorization.split(" ")[1];
+  if (!token) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+
+  try {
+    const userInfo = await admin.auth().verifyIdToken(token);
+    req.token_email = userInfo.email;
+    console.log("after token validation ", userInfo);
+    next();
+  } catch {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@web.8viqnbz.mongodb.net/?appName=web`;
 
@@ -53,7 +79,7 @@ async function run() {
     });
 
     //add to db
-    app.post("/artworks", async (req, res) => {
+    app.post("/artworks", verifyFirebaseToken, async (req, res) => {
       const newArt = req.body;
       const result = await artsCollection.insertOne(newArt);
       res.send(result);

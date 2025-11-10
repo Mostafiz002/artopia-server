@@ -32,14 +32,22 @@ async function run() {
 
     //featured arts
     app.get("/artworks/featured", async (req, res) => {
-      const cursor = artsCollection.find().sort({ }).limit(6);
+      const cursor = artsCollection
+        .find({ visibility: "public" })
+        .sort({ created_at: -1 })
+        .limit(6);
       const result = await cursor.toArray();
       res.send(result);
     });
 
-    //get all artworks
+    //get all public artworks
     app.get("/artworks", async (req, res) => {
-      const cursor = artsCollection.find()
+      const email = req.query.email;
+      const query = { visibility: "public" };
+      if (email) {
+        query.artistEmail = email;
+      }
+      const cursor = artsCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
     });

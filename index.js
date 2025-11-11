@@ -81,7 +81,20 @@ async function run() {
     //add to db
     app.post("/artworks", verifyFirebaseToken, async (req, res) => {
       const newArt = req.body;
-      const result = await artsCollection.insertOne(newArt);
+      const newArtwork = {
+        ...newArt,
+        likes: 0,
+        created_at: new Date(),
+      };
+      const result = await artsCollection.insertOne(newArtwork);
+      res.send(result);
+    });
+
+    app.get("/search", async (req, res) => {
+      search = req.query.search;
+      const result = await artsCollection
+        .find({ visibility: "public",title: { $regex: search, $options: "i" } })
+        .toArray();
       res.send(result);
     });
 

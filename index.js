@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const admin = require("firebase-admin");
 const port = process.env.PORT || 3000;
@@ -56,7 +56,7 @@ async function run() {
     const db = client.db("artopia_db");
     const artsCollection = db.collection("artwork");
 
-    //featured arts
+    //featured artworks
     app.get("/artworks/featured", async (req, res) => {
       const cursor = artsCollection
         .find({ visibility: "public" })
@@ -67,14 +67,29 @@ async function run() {
     });
 
     //get all public artworks
-    app.get("/artworks", async (req, res) => {
-      const email = req.query.email;
+    app.get("/artworks/public", async (req, res) => {
       const query = { visibility: "public" };
-      if (email) {
-        query.artistEmail = email;
-      }
       const cursor = artsCollection.find(query);
       const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    //get all artworks
+    app.get("/artworks", verifyFirebaseToken, async (req, res) => {
+      const email = req.query.email;
+      const query = {};
+      if (email) {
+        query.email = email;
+      }
+      const result = await artsCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    //get single data from db
+    app.get("/artworks/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await artsCollection.findOne(query);
       res.send(result);
     });
 
@@ -90,10 +105,14 @@ async function run() {
       res.send(result);
     });
 
+    //search public data
     app.get("/search", async (req, res) => {
       search = req.query.search;
       const result = await artsCollection
-        .find({ visibility: "public",title: { $regex: search, $options: "i" } })
+        .find({
+          visibility: "public",
+          title: { $regex: search, $options: "i" },
+        })
         .toArray();
       res.send(result);
     });

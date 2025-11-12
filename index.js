@@ -16,7 +16,6 @@ app.use(cors());
 app.use(express.json());
 
 const verifyFirebaseToken = async (req, res, next) => {
-  console.log("in the verified middleware ", req.headers.authorization);
   if (!req.headers.authorization) {
     return res.status(401).send({ message: "unauthorized access" });
   }
@@ -79,14 +78,14 @@ async function run() {
       const email = req.query.email;
       const query = {};
       if (email) {
-        query.email = email;
+        query.artistEmail = email;
       }
       const result = await artsCollection.find(query).toArray();
       res.send(result);
     });
 
     //get single data from db
-    app.get("/artworks/:id", async (req, res) => {
+    app.get("/artworks/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await artsCollection.findOne(query);
@@ -114,6 +113,26 @@ async function run() {
           title: { $regex: search, $options: "i" },
         })
         .toArray();
+      res.send(result);
+    });
+
+    // increase like
+    app.patch("/artworks/like/:id", verifyFirebaseToken, async (req, res) => {
+      const id = req.params.id;
+      const userEmail = req.token_email;
+      const query = { _id: new ObjectId(id) };
+      const artwork = await artsCollection.findOne(query);
+
+      if (artwork.likedBy?.includes(userEmail)) {
+        return res.status(400).send({ message: "Already liked" });
+      }
+
+      const update = {
+        $inc: { likes: 1 },
+        $addToSet: { likedBy: userEmail },
+      };
+      
+      const result = await artsCollection.updateOne(query, update);
       res.send(result);
     });
 

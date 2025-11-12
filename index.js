@@ -54,6 +54,7 @@ async function run() {
 
     const db = client.db("artopia_db");
     const artsCollection = db.collection("artwork");
+    const favoritesCollection = db.collection("favorite");
 
     //featured artworks
     app.get("/artworks/featured", async (req, res) => {
@@ -131,8 +132,77 @@ async function run() {
         $inc: { likes: 1 },
         $addToSet: { likedBy: userEmail },
       };
-      
+
       const result = await artsCollection.updateOne(query, update);
+      res.send(result);
+    });
+
+    //--------- favorites api ---------
+
+    //add to favorites
+    app.post("/favorites/:id", verifyFirebaseToken, async (req, res) => {
+      const id = req.params.id;
+      const userEmail = req.token_email;
+
+      //check for if already fav
+      const existingFavorite = await favoritesCollection.findOne({
+        userEmail,
+        id,
+      });
+
+      if (existingFavorite) {
+        return res.status(400).send({ message: "Already added to favorites" });
+      }
+
+      const favorite = {
+        userEmail,
+        id,
+      };
+      const result = await favoritesCollection.insertOne(favorite);
+      res.send(result);
+    });
+
+    //get fav data for email
+    app.get("/favorites", verifyFirebaseToken, async (req, res) => {
+      const email = req.query.email;
+      const result = await favoritesCollection
+        .find({ userEmail: email })
+        .toArray();
+      res.send(result);
+    });
+
+    //get fav data for email
+    app.get("/favorites-artworks", verifyFirebaseToken, async (req, res) => {
+      const userEmail = req.token_email;
+      const favorites = await favoritesCollection.find({ userEmail }).toArray();
+
+      // get all the id
+      const artworkIds = favorites.map((fav) => new ObjectId(fav.id));
+
+      // find the data for all the id
+      const artworks = await artsCollection
+        .find({ _id: { $in: artworkIds } })
+        .toArray();
+      res.send(artworks);
+    });
+
+    //get single data of favorites
+    app.get("/favorites/:id", verifyFirebaseToken, async (req, res) => {
+      const id = req.params.id;
+      const userEmail = req.token_email;
+
+      const result = await favoritesCollection.findOne({
+        userEmail,
+        id,
+      });
+      res.send(result);
+    });
+
+    //delete from fav
+    app.delete("/favorites/:id", verifyFirebaseToken, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await favoritesCollection.deleteOne(query);
       res.send(result);
     });
 

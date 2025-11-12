@@ -105,6 +105,34 @@ async function run() {
       res.send(result);
     });
 
+    //update artwork
+    app.patch("/artworks/:id", verifyFirebaseToken, async (req, res) => {
+      const id = req.params.id;
+      const updatedArt = req.body;
+      const query = { _id: ObjectId(id) };
+      const update = {
+        $set: {
+          image: updatedArt.image,
+          title: updatedArt.title,
+          category: updatedArt.category,
+          medium: updatedArt.medium,
+          description: updatedArt.description,
+          dimensions: updatedArt.dimensions,
+          price: updatedArt.price,
+          visibility: updatedArt.visibility,
+        },
+      };
+      const result = await artsCollection.updateOne(query, update);
+    });
+
+    //delete artwork
+    app.delete("/artworks/:id", verifyFirebaseToken, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await favoritesCollection.deleteOne(query);
+      res.send(result);
+    });
+
     //search public data
     app.get("/search", async (req, res) => {
       search = req.query.search;

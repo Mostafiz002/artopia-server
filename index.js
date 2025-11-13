@@ -6,7 +6,9 @@ const app = express();
 const admin = require("firebase-admin");
 const port = process.env.PORT || 3000;
 
-const serviceAccount = require("./artopia-firebase-adminsdk.json");
+const decoded = Buffer.from(process.env.FIREBASE_SERVICE_KEY, "base64").toString("utf8");
+const serviceAccount = JSON.parse(decoded);
+
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
@@ -50,7 +52,7 @@ app.get("/", (req, res) => {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
 
     const db = client.db("artopia_db");
     const artsCollection = db.collection("artwork");
@@ -89,7 +91,7 @@ async function run() {
     app.get("/artworks/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
-      const result = await artsCollection.findOne(query);
+      const result = await artsCollection.findOne(query)
       res.send(result);
     });
 
@@ -109,7 +111,7 @@ async function run() {
     app.patch("/artworks/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const updatedArt = req.body;
-      const query = { _id: ObjectId(id) };
+      const query = { _id: new ObjectId(id) };
       const update = {
         $set: {
           image: updatedArt.image,
@@ -123,13 +125,14 @@ async function run() {
         },
       };
       const result = await artsCollection.updateOne(query, update);
+      res.send(result);
     });
 
     //delete artwork
     app.delete("/artworks/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
-      const result = await favoritesCollection.deleteOne(query);
+      const result = await artsCollection.deleteOne(query);
       res.send(result);
     });
 
@@ -234,7 +237,7 @@ async function run() {
       res.send(result);
     });
 
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
